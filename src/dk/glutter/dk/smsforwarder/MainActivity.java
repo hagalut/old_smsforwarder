@@ -5,9 +5,11 @@ import java.util.List;
 
 import android.app.Activity;
 import android.content.ContentResolver;
+import android.content.CursorLoader;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.PowerManager.WakeLock;
 import android.telephony.SmsManager;
 import android.view.Menu;
@@ -21,23 +23,37 @@ public class MainActivity extends Activity {
 	SmsManager smsManager = SmsManager.getDefault();
 	WakeLock mWakeLock;
 	ArrayList<String> numbers = new ArrayList<String>();
+	Handler handler;
+	String text = "";
 	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
-		setContentView(R.layout.activity_main);
+		//setContentView(R.layout.activity_main);
 		//getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+		
 		tv = (TextView) findViewById(R.id.textView1);
 		tv.setText("Set Your Text to display here.");
 		
 		Window window = getWindow();
 		window.addFlags(WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD);
 		
-		
+		handler = new Handler();
+		handler.postDelayed(new Runnable() {
+		    public void run() {
+		    	
+		    	for (int i = 0; i < getAllSms().size(); i++) {
+					text += "besked " + i + ": " + getAllSms().get(0).getMsg() + " - ";
+				}
+		    	
+		    	tv.setText(text);
+
+		        handler.postDelayed(this, 3300); //now is every 2 minutes
+		    }
+		 }, 3300); //Every 120000 ms (2 minutes)
 		
 		//Toast.makeText(context, " != ", 222).show();
 		//SmsBehandler smsBehandler = new SmsBehandler(context, phoneNr, besked);
-		
 	}
 	@Override
 	public boolean onCreateOptionsMenu(Menu menu) {
@@ -54,6 +70,7 @@ public class MainActivity extends Activity {
 		ContentResolver cr = this.getContentResolver();
 
 		Cursor c = cr.query(message, null, null, null, null);
+		
 		this.startManagingCursor(c);
 		int totalSMS = c.getCount();
 
