@@ -174,10 +174,23 @@ public class SmsBehandler
 	{
 		iFragmentList = smsManager.divideMessage (aMessageText);
 		
+		
+		
+		
+		
+		//TODO: delay here is wrong
+		
+		
+		
+		
 			Handler myHandler = new Handler();
 			myHandler.postDelayed(myRunnable, 1000);
 			smsManager.sendMultipartTextMessage(aDestination, null, iFragmentList, null, null);
 		
+			
+			
+			
+			
 		return true;
 	}
 	

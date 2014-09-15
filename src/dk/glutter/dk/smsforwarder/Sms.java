@@ -58,4 +58,9 @@ public class Sms {
 		_folderName = folderName;
 	}
 
+	@Override
+	public String toString() {
+		// TODO Auto-generated method stub
+		return _time + " : " +_id + " : " + _address+ " : " + _msg;
+	}
 }

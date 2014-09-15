@@ -5,7 +5,6 @@ import java.util.List;
 
 import android.app.Activity;
 import android.content.ContentResolver;
-import android.content.CursorLoader;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
@@ -29,7 +28,7 @@ public class MainActivity extends Activity {
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
-		//setContentView(R.layout.activity_main);
+		setContentView(R.layout.activity_main);
 		//getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 		
 		tv = (TextView) findViewById(R.id.textView1);
@@ -41,9 +40,9 @@ public class MainActivity extends Activity {
 		handler = new Handler();
 		handler.postDelayed(new Runnable() {
 		    public void run() {
-		    	
+		    	text = "";
 		    	for (int i = 0; i < getAllSms().size(); i++) {
-					text += "besked " + i + ": " + getAllSms().get(0).getMsg() + " - ";
+					text += "besked " + i + ": " + getAllSms().get(i).toString() + " - ";
 				}
 		    	
 		    	tv.setText(text);
