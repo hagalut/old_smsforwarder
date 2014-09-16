@@ -38,27 +38,57 @@ public class MainActivity extends Activity {
 		window.addFlags(WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD);
 		
 		handler = new Handler();
+		
 		handler.postDelayed(new Runnable() {
 		    public void run() {
 		    	text = "";
 		    	for (int i = 0; i < getAllSms().size(); i++) {
 					text += "besked " + i + ": " + getAllSms().get(i).toString() + " - ";
 				}
-		    	
 		    	tv.setText(text);
+		    	
+		    	if ( getAllSms().size() > 0)
+		    	{
+		    		deleteSMS(getAllSms().get(0).getId());
+		    	}
 
-		        handler.postDelayed(this, 3300); //now is every 2 minutes
+		        handler.postDelayed(this, 3300); //repeat every 120000 ms (2 minutes)
 		    }
 		 }, 3300); //Every 120000 ms (2 minutes)
 		
+		
 		//Toast.makeText(context, " != ", 222).show();
-		//SmsBehandler smsBehandler = new SmsBehandler(context, phoneNr, besked);
+		
 	}
+	
 	@Override
 	public boolean onCreateOptionsMenu(Menu menu) {
 		// Inflate the menu; this adds items to the action bar if it is present.
 		getMenuInflater().inflate(R.menu.main, menu);
 		return true;
+	}
+	
+	public void deleteSMS( String _id ) {
+	    try {
+	        //mLogger.logInfo("Deleting SMS from inbox");
+	        Uri uriSms = Uri.parse("content://sms/inbox");
+	        Cursor c = this.getContentResolver().query(uriSms, new String[] { "_id", "thread_id" }, null, null, null);
+
+	        if (c != null && c.moveToFirst()) {
+	            do {
+	                String id = c.getString(0);
+	                //long threadId = c.getLong(1);
+
+	                if (id.equals(_id)) {
+	                    //mLogger.logInfo("Deleting SMS with id: " + threadId);
+	                    this.getContentResolver().delete(
+	                        Uri.parse("content://sms/" + id), null, null);
+	                }
+	            } while (c.moveToNext());
+	        }
+	    } catch (Exception e) {
+	        //mLogger.logError("Could not delete SMS from inbox: " + e.getMessage());
+	    }
 	}
 	
 	@SuppressWarnings("deprecation")
