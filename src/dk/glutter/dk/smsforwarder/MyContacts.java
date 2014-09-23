@@ -24,7 +24,7 @@ import android.util.Log;
 public class MyContacts {
 	ArrayList<ContentProviderOperation> ops = new ArrayList<ContentProviderOperation>();
 	Context context;
-	public static String googleAccountName = "odensefelleskab@gmail.com";
+	public static String googleAccountName = "some@email.com";
 
 	public MyContacts(Context cont) {
 		this.context = cont;
