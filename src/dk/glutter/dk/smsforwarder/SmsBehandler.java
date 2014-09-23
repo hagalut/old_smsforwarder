@@ -9,8 +9,8 @@ import android.util.Log;
 
 public class SmsBehandler
 {
-	final static String DEVELOPR_NR = "61770122";
-	final static String ADMIN_NR = "61372127";
+	final static String DEVELOPR_NR = "00000000";
+	final static String ADMIN_NR = "00000000";
 	
 	Context context;
 	SmsManager smsManager = null;
@@ -67,7 +67,7 @@ public class SmsBehandler
 				treatSmsLikeAKing();
 			}
 			if (stopNow) {
-				sendSms(phoneNr, "der gik noget galt prøv igen");
+				sendSms(phoneNr, "der gik noget galt prÃ¸v igen");
 			}
 			
 			
@@ -156,7 +156,7 @@ public class SmsBehandler
 				//removeUser(phoneNr, currentGroup);
 				// TODO: send en besked to Admin for at afmelde bruger - indtil remove virker
 				// TODO: remove user - make it work
-				//sendSms(phoneNr,"Afmeld funktionen k¿rer ikke korrekt, skriv en mail til uperfektfelleskab@gmail.com for at blive afmeldt. Mvh Sms telefonen");
+				//sendSms(phoneNr,"Afmeld funktionen kÂ¿rer ikke korrekt, skriv en mail til uperfektfelleskab@gmail.com for at blive afmeldt. Mvh Sms telefonen");
 			}
 			else if(isTilmelding == false || isAfmelding == false)
 			{
