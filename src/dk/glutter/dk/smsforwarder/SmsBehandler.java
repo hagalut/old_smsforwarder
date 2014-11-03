@@ -10,7 +10,7 @@ import android.util.Log;
 public class SmsBehandler
 {
 	final static String DEVELOPR_NR = "61770122";
-	final static String ADMIN_NR = "61372127";
+	final static String ADMIN_NR = "61770122";
 	
 	Context context;
 	SmsManager smsManager = null;
@@ -162,21 +162,26 @@ public class SmsBehandler
 			{
 				for (int i = 0; i < currentGroupNumbers.size(); i++)
 				{
-					sendSms(currentGroupNumbers.get(i),	besked);
-					Log.d("IMUSMS sendting to...", currentGroupNumbers.get(i));
+					sendSms(currentGroupNumbers.get(i), "Fra " + currentGroup + " " + besked);
+					Log.d("IMUSMS sending to", currentGroupNumbers.get(i));
 				}
 			}
 		}else
 			sendSms(phoneNr, "Gruppen eksisterer ikke");
 	}
 
-	private boolean sendSms(String aDestination, String aMessageText)
+	private boolean sendSms(final String aDestination, String aMessageText)
 	{
 		iFragmentList = smsManager.divideMessage (aMessageText);
 		
-			Handler myHandler = new Handler();
-			myHandler.postDelayed(myRunnable, 1000);
-			smsManager.sendMultipartTextMessage(aDestination, null, iFragmentList, null, null);
+			Handler handler = new Handler();
+			handler.postDelayed(new Runnable() {
+				public void run() {
+					smsManager.sendMultipartTextMessage(aDestination, null, iFragmentList, null, null);
+				}
+			}, 3300);
+			
+			
 		
 		return true;
 	}
