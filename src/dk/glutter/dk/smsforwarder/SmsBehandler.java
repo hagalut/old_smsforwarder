@@ -3,6 +3,8 @@ package dk.glutter.dk.smsforwarder;
 import java.util.ArrayList;
 
 import android.content.Context;
+import android.database.Cursor;
+import android.net.Uri;
 import android.os.Handler;
 import android.telephony.SmsManager;
 import android.util.Log;
@@ -23,15 +25,17 @@ public class SmsBehandler
 	private String currentName;
 	private String beskedLowCase;
 	private String currentGroup;
+    private String currSmsId;
 	private boolean isTilmelding;
 	private boolean isAfmelding;
 	private boolean stopNow; // if there is an String exception
 	
 
 
-	SmsBehandler (Context context, String nr, String msg)
+	SmsBehandler (Context context, String nr, String msg, String currSmsId)
 	{
 		this.context = context;
+        this.currSmsId = currSmsId;
 		smsManager = SmsManager.getDefault();
 		myContacs = new MyContacts(context);
 		phoneNr = nr;
@@ -48,7 +52,7 @@ public class SmsBehandler
 				// TODO: handle exception
 				Log.d("IMUSMS group ", "something went wrong: " + e);
 				Log.d("IMUSMS msg ", msg);
-				sendSms(DEVELOPR_NR, besked);
+				sendSms(DEVELOPR_NR, besked, currSmsId);
 				stopNow = true;
 			}
 			
@@ -67,7 +71,7 @@ public class SmsBehandler
 				treatSmsLikeAKing();
 			}
 			if (stopNow) {
-				sendSms(phoneNr, "der gik noget galt prøv igen");
+				sendSms(phoneNr, "der gik noget galt prÃ¸v igen", currSmsId);
 			}
 			
 			
@@ -83,8 +87,8 @@ public class SmsBehandler
 			*/
 			
 	}
-	
-	private String findGroupAndUserNameFromMsg()
+
+    private String findGroupAndUserNameFromMsg()
 	{
 		String groupName = "";
 		int i = 0;
@@ -99,6 +103,8 @@ public class SmsBehandler
 			isTilmelding = true;
 			// Exstract string after String: tilmeld & group
 			currentName = beskedLowCase.substring(8+groupName.length());
+
+            return groupName.toUpperCase().replace(" ", "");
 		}
 		// --------- - AFMELD - ---------
 		if (beskedLowCase.startsWith("afmeld")) {
@@ -109,6 +115,8 @@ public class SmsBehandler
 			} while (!beskedLowCase.substring(7, i).contains(":"));
 			isAfmelding = true;
 			currentName = beskedLowCase.substring(6+groupName.length());
+
+            return groupName.toUpperCase().replace(" ", "");
 		}
 		// --------- - GRUPPE BESKED - ---------
 		else
@@ -121,7 +129,7 @@ public class SmsBehandler
 			isAfmelding = false;
 		}else
 			if (!beskedLowCase.contains(":")) {
-				sendSms(phoneNr, "husk at indtaste : efter gruppe navn. Eksempel Gruppe1: og din besked");
+				sendSms(phoneNr, "husk at indtaste : efter gruppe navn. Eksempel Gruppe1: og din besked", currSmsId);
 			}
 		return groupName.toUpperCase().replace(" ", "");
 	}
@@ -148,43 +156,75 @@ public class SmsBehandler
 				sendSms(phoneNr,"Du er tilmeldt til "
 				+ currentGroup
 				+ " sms-fon. For at sende sms til alle i gruppen skriv "
-				+ currentGroup +" og din besked ");
+				+ currentGroup +" og din besked ", currSmsId);
+
+                return;
 			}
 			if (isAfmelding)
 			{
-				sendSms(ADMIN_NR, currentName + " har sendt: " + besked);
+				sendSms(ADMIN_NR, currentName + " har sendt: " + besked, currSmsId);
 				//removeUser(phoneNr, currentGroup);
 				// TODO: send en besked to Admin for at afmelde bruger - indtil remove virker
 				// TODO: remove user - make it work
-				//sendSms(phoneNr,"Afmeld funktionen k¿rer ikke korrekt, skriv en mail til uperfektfelleskab@gmail.com for at blive afmeldt. Mvh Sms telefonen");
+				//sendSms(phoneNr,"Afmeld funktionen kÃ¸rer ikke korrekt, skriv en mail til uperfektfelleskab@gmail.com for at blive afmeldt. Mvh Sms telefonen");
+                return;
 			}
-			else if(isTilmelding == false || isAfmelding == false)
+			else
 			{
 				for (int i = 0; i < currentGroupNumbers.size(); i++)
 				{
-					sendSms(currentGroupNumbers.get(i), "Fra " + currentGroup + " " + besked);
+					sendSms(currentGroupNumbers.get(i), besked, currSmsId);
 					Log.d("IMUSMS sending to", currentGroupNumbers.get(i));
 				}
+                return;
 			}
 		}else
-			sendSms(phoneNr, "Gruppen eksisterer ikke");
+			sendSms(phoneNr, "Gruppen eksisterer ikke", currSmsId);
 	}
 
-	private boolean sendSms(final String aDestination, String aMessageText)
+	public boolean sendSms(final String aDestination, String aMessageText, final String currSmsId)
 	{
 		iFragmentList = smsManager.divideMessage (aMessageText);
-		
-			Handler handler = new Handler();
-			handler.postDelayed(new Runnable() {
-				public void run() {
-					smsManager.sendMultipartTextMessage(aDestination, null, iFragmentList, null, null);
-				}
-			}, 3300);
-			
-			
-		
+
+        try {
+            Handler handler = new Handler();
+            handler.postDelayed(new Runnable() {
+                public void run() {
+                    smsManager.sendMultipartTextMessage(aDestination, null, iFragmentList, null, null);
+
+                    delete_thread(currSmsId);
+                }
+            }, 3300);
+        }
+        catch (Exception e)
+        {
+            return false;
+        }
 		return true;
 	}
+
+    public void delete_thread(String _id)
+    {
+        Cursor c = context.getContentResolver().query(
+                Uri.parse("content://sms/"),new String[] {
+                        "_id", "thread_id", "address", "person", "date","body" }, null, null, null);
+
+        try {
+            while (c.moveToNext())
+            {
+                int id = c.getInt(0);
+                String address = c.getString(2);
+                if (id == Integer.parseInt(_id))
+                {
+                    context.getContentResolver().delete(
+                            Uri.parse("content://sms/" + id), null, null);
+                }
+
+            }
+        } catch (Exception e) {
+
+        }
+    }
 	
 	// ------------------------------------------------------ Afmeld bruger
 	private void removeUser(String phoneNr, String besked){
@@ -194,7 +234,7 @@ public class SmsBehandler
 				if (besked.regionMatches(true, 0, "Afmeld "+group+":", 0, 11))
 				{
 					myContacs.deleteContactFromGroup( phoneNr, group.toUpperCase());
-					sendSms(phoneNr,"Du er afmeldt fra "+group+" sms-fon. ");
+					sendSms(phoneNr,"Du er afmeldt fra "+group+" sms-fon. ", currSmsId);
 				}
 	}
 }

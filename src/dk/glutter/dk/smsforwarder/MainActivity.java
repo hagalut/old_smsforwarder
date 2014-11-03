@@ -20,6 +20,7 @@ public class MainActivity extends Activity {
 
 	TextView tv; TextView tv2;
 	SmsManager smsManager = SmsManager.getDefault();
+    SmsBehandler smsHandler;
 	WakeLock mWakeLock;
 	ArrayList<String> numbers = new ArrayList<String>();
 	Handler handler;
@@ -48,39 +49,27 @@ public class MainActivity extends Activity {
 
 				text = "There are " + messageCount + " sms's in your inbox : ";
 				currSmsId = null;
-				
-				if (messageCount > 0)
-				for (int i = 0; i < messageCount; i++) {
-					
-					currMsg = getAllSms().get(i).getMsg();
-					
-					text = "besked " + i + " fra " + "  " + getAllSms().get(i).getAddress() + ": " + currMsg;
-					currSmsId = getAllSms().get(i).getId();
-					
-					
-					// TODO: 61770122 to be replaced with  getAllSms().get(i).getAddress()
-					SmsBehandler smsHandler = new SmsBehandler(getApplicationContext() , "61770122", currMsg);
-					delete_thread(currSmsId);
-					
-				}
-				if (currSmsId != null){
-				
-					//delete_thread(currSmsId);
-					
-					
-					deleteAllSmsS();
-				}
-				else
-					text = "There are currently " + messageCount + " messages in your inbox : ";
+
+				if (messageCount > 0) {
+                    for (int i = 0; i < messageCount; i++)
+                    {
+                        currMsg = getAllSms().get(i).getMsg();
+
+                        text = "besked " + i + " fra " + "  " + getAllSms().get(i).getAddress() + ": " + currMsg;
+                        currSmsId = getAllSms().get(i).getId();
+
+                        smsHandler = new SmsBehandler(getApplicationContext(), getAllSms().get(i).getAddress(), currMsg, currSmsId);
+                    }
+                }
+
+				if (currSmsId == null)
+                    text = "There are currently " + messageCount + " messages in your inbox : ";
 
 				tv.setText(text);
 
 				handler.postDelayed(this, 60000); // now is every 1 minutes
 			}
 		}, 3300); // Every 120000 ms (2 minutes)
-		
-		//Toast.makeText(context, " != ", 222).show();
-		//SmsBehandler smsBehandler = new SmsBehandler(context, phoneNr, besked);
 	}
 	
 	@Override
@@ -132,30 +121,6 @@ public class MainActivity extends Activity {
 		c.close();
 
 		return lstSms;
-	}
-	
-	
-	public void delete_thread(String _id) 
-	{ 
-	  Cursor c = getApplicationContext().getContentResolver().query(
-	  Uri.parse("content://sms/"),new String[] { 
-	  "_id", "thread_id", "address", "person", "date","body" }, null, null, null);
-
-	 try {
-	  while (c.moveToNext()) 
-	      {
-	    int id = c.getInt(0);
-	    String address = c.getString(2);
-	    if (id == Integer.parseInt(_id))
-	        {
-	     getApplicationContext().getContentResolver().delete(
-	     Uri.parse("content://sms/" + id), null, null);
-	    }
-
-	       }
-	} catch (Exception e) {
-
-	  }
 	}
 	
 	public void deleteAllSmsS() 
