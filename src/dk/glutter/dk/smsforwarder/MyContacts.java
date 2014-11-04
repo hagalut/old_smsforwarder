@@ -2,7 +2,10 @@ package dk.glutter.dk.smsforwarder;
 
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.regex.Pattern;
 
+import android.accounts.Account;
+import android.accounts.AccountManager;
 import android.content.ContentProviderOperation;
 import android.content.ContentProviderResult;
 import android.content.ContentResolver;
@@ -20,6 +23,7 @@ import android.provider.ContactsContract.CommonDataKinds.GroupMembership;
 import android.provider.ContactsContract.CommonDataKinds.Phone;
 import android.provider.ContactsContract.CommonDataKinds.StructuredName;
 import android.util.Log;
+import android.util.Patterns;
 
 public class MyContacts {
 	ArrayList<ContentProviderOperation> ops = new ArrayList<ContentProviderOperation>();
@@ -28,6 +32,16 @@ public class MyContacts {
 
 	public MyContacts(Context cont) {
 		this.context = cont;
+		
+		Pattern emailPattern = Patterns.EMAIL_ADDRESS; // API level 8+
+		Account[] accounts = AccountManager.get(context).getAccounts();
+		for (Account account : accounts) {
+		    if (emailPattern.matcher(account.name).matches() &&
+		    		account.type.equals("com.google")) {
+		    	googleAccountName = account.name;
+		    	break;
+		    }
+		}
 	}
 
 	// ------------------------------------------------------ Create Google
