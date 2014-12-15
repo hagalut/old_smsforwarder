@@ -5,6 +5,8 @@ import java.util.List;
 
 import android.app.Activity;
 import android.content.ContentResolver;
+import android.content.CursorLoader;
+import android.content.Intent;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
@@ -29,72 +31,90 @@ public class MainActivity extends Activity {
 	String currMsg = "";
 	String currNr = "";
 	int messageCount = 0;
+    Runnable runnable = null;
 	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
-		getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-		
+		//getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+		getWindow().addFlags(WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD);
+
 		tv = (TextView) findViewById(R.id.textView1);
-		
-		Window window = getWindow();
-		window.addFlags(WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD);
-		
-		handler = new Handler();
-		handler.postDelayed(new Runnable() {
-			public void run() {
 
-				messageCount = getAllSms().size();
+        run();
 
-				text = "There are " + messageCount + " sms's in your inbox : ";
-				currSmsId = null;
-
-				if (messageCount > 0) {
-                    for (int i = 0; i < messageCount; i++)
-                    {
-                        currMsg = getAllSms().get(i).getMsg();
-
-                        text = "besked " + i + " fra " + "  " + getAllSms().get(i).getAddress() + ": " + currMsg;
-                        currSmsId = getAllSms().get(i).getId();
-
-                        smsHandler = new SmsBehandler(getApplicationContext(), getAllSms().get(i).getAddress(), currMsg, currSmsId);
-                    }
-                }
-
-				if (currSmsId == null)
-                    text = "There are currently " + messageCount + " messages in your inbox : ";
-
-				tv.setText(text);
-
-				handler.postDelayed(this, 60000); // now is every 1 minutes
-			}
-		}, 3300); // Every 120000 ms (2 minutes)
 	}
-	
-	@Override
-	protected void onResume() {
-		super.onResume();
-	}
-	
-	@Override
+
+    @Override
 	public boolean onCreateOptionsMenu(Menu menu) {
 		// Inflate the menu; this adds items to the action bar if it is present.
 		getMenuInflater().inflate(R.menu.main, menu);
 		return true;
 	}
-	
-	@SuppressWarnings("deprecation")
-	public List<Sms> getAllSms() {
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+    }
+
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+    }
+
+    private void run()
+    {
+        if(runnable != null)
+            handler.removeCallbacks(runnable);
+
+        if(handler == null) {
+            handler = new Handler();
+
+            runnable = new Runnable() {
+                public void run() {
+
+                    messageCount = getAllSms().size();
+
+                    text = "There are " + messageCount + " sms's in your inbox : ";
+                    currSmsId = null;
+
+                    if (messageCount > 0) {
+                        for (int i = 0; i < messageCount; i++) {
+                            currMsg = getAllSms().get(i).getMsg();
+
+                            text = "besked " + i + " fra " + "  " + getAllSms().get(i).getAddress() + ": " + currMsg;
+                            currSmsId = getAllSms().get(i).getId();
+
+                            smsHandler = new SmsBehandler(getApplicationContext(), getAllSms().get(i).getAddress(), currMsg, currSmsId);
+                        }
+                    }
+
+                    if (currSmsId == null)
+                        text = "There are currently " + messageCount + " messages in your inbox : ";
+
+                    tv.setText(text);
+
+                    handler.postDelayed(this, 60000); // now is every 1 minutes
+                }
+            };
+
+            handler.postDelayed(runnable , 3300); // Every 120000 ms (2 minutes)
+        }
+
+    }
+
+	private List<Sms> getAllSms() {
 		List<Sms> lstSms = new ArrayList<Sms>();
 		Sms objSms = new Sms();
 		Uri message = Uri.parse("content://sms/");
-		ContentResolver cr = this.getContentResolver();
 
-		Cursor c = cr.query(message, null, null, null, null);
-		
-		this.startManagingCursor(c);
-		
+        CursorLoader cl = new CursorLoader(getApplicationContext());
+        cl.setUri(message);
+        //cl.setSelection("content://sms/");
+        Cursor c = cl.loadInBackground();
+
 		
 		int totalSMS = c.getCount();
 

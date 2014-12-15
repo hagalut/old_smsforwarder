@@ -28,7 +28,7 @@ import android.util.Patterns;
 public class MyContacts {
 	ArrayList<ContentProviderOperation> ops = new ArrayList<ContentProviderOperation>();
 	Context context;
-	public static String googleAccountName = "odensefelleskab@gmail.com";
+	public static String googleAccountName = "uperfektfelleskab@gmail.com";
 
 	public MyContacts(Context cont) {
 		this.context = cont;
