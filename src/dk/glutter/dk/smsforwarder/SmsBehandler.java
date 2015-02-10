@@ -175,25 +175,13 @@ public class SmsBehandler
                 ArrayList<String> tempNumbers = currentGroupNumbers;
                 int groupUsersCount = tempNumbers.size();
 
-                // remove messenger
-                for (int i = 0; i < groupUsersCount; i++)
-                {
-                    if (tempNumbers.get(i).equals(fromPhoneNr))
-                    {
-                        tempNumbers.remove(i);
-                        groupUsersCount--;
-                    }
-                }
-
                 // send to all numbers in group
-                if (groupUsersCount > 0)
 				for (int i = 0; i < groupUsersCount; i++)
 				{
 					sendSms(tempNumbers.get(i), besked, currSmsId);
 					Log.d("IMUSMS sending to", tempNumbers.get(i));
 				}
 
-                sendSms( fromPhoneNr ,"Din besked blev sendt til " + currentGroup + " gruppens " + groupUsersCount + " brugere. Ha' det rigtigt godt!", currSmsId);
                 return;
 			}
 		}else
