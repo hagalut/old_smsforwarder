@@ -6,6 +6,7 @@ import java.util.regex.Pattern;
 
 import android.accounts.Account;
 import android.accounts.AccountManager;
+import android.annotation.SuppressLint;
 import android.content.ContentProviderOperation;
 import android.content.ContentProviderResult;
 import android.content.ContentResolver;
@@ -46,7 +47,8 @@ public class MyContacts {
 
 	// ------------------------------------------------------ Create Google
 	// Group ()
-	public void createGoogleGroup(String groupName) {
+	@SuppressLint("LongLogTag")
+    public void createGoogleGroup(String groupName) {
 		ops = new ArrayList<ContentProviderOperation>();
 
 		ops.add(ContentProviderOperation

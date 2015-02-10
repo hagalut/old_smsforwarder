@@ -37,6 +37,21 @@
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+
+            <receiver android:name="MyReceiver" android:enabled="true" android:exported="true" android:permission="android.permission.BROADCAST_SMS">
+                <intent-filter android:priority="1000">
+                    <action android:name="com.zegoggles.smssync.BACKUP"/>
+                    <action android:name="android.provider.Telephony.SMS_RECEIVED"/>
+                    <action android:name="android.provider.Telephony.SMS_DELIVER"/>
+                </intent-filter>
+            </receiver>
+
+            <receiver android:name="MyReceiver">
+                <intent-filter>
+                    <action android:name="com.zegoggles.smssync.BACKUP">
+                    </action>
+                </intent-filter>
+            </receiver>
         </activity>
         
     </application>

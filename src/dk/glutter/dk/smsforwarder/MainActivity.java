@@ -8,6 +8,7 @@ import android.app.Activity;
 import android.content.ContentResolver;
 import android.content.CursorLoader;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Build;
@@ -34,6 +35,9 @@ public class MainActivity extends Activity {
 	String currNr = "";
 	int messageCount = 0;
     Runnable runnable = null;
+
+    MyReceiver myReceiver = null;
+    Boolean myReceiverIsRegistered = false;
 	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -56,15 +60,9 @@ public class MainActivity extends Activity {
 	}
 
     @Override
-    protected void onPause() {
-        super.onPause();
-    }
-
-
+    protected void onPause() {super.onPause();}
     @Override
-    protected void onResume() {
-        super.onResume();
-    }
+    protected void onResume() {super.onResume();}
 
     private void run()
     {

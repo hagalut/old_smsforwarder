@@ -20,7 +20,7 @@ public class SmsBehandler
 	private ArrayList<String> iFragmentList = null;
 	private ArrayList<String> allGroupNames = null;
 	private ArrayList<String> currentGroupNumbers = null;
-	private String phoneNr;
+	private String fromPhoneNr;
 	private String besked;
 	private String currentName;
 	private String beskedLowCase;
@@ -32,13 +32,13 @@ public class SmsBehandler
 	
 
 
-	SmsBehandler (Context context, String nr, String msg, String currSmsId)
+	SmsBehandler (Context context, String fromNr, String msg, String currSmsId)
 	{
 		this.context = context;
         this.currSmsId = currSmsId;
 		smsManager = SmsManager.getDefault();
 		myContacs = new MyContacts(context);
-		phoneNr = nr;
+		fromPhoneNr = fromNr;
 		besked = msg;
 		beskedLowCase = msg.toLowerCase();
 		
@@ -71,7 +71,7 @@ public class SmsBehandler
 				treatSmsLikeAKing();
 			}
 			if (stopNow) {
-				sendSms(phoneNr, "der gik noget galt prøv igen", currSmsId);
+				sendSms(fromPhoneNr, "der gik noget galt prøv igen", currSmsId);
 			}
 			
 			
@@ -80,7 +80,7 @@ public class SmsBehandler
 			 * 
 			Log.d("IMUSMS currentGroup: ", currentGroup);
 			Log.d("IMUSMS currentName: ", currentName);
-			Log.d("IMUSMS phoneNr: ", phoneNr);
+			Log.d("IMUSMS fromPhoneNr: ", fromPhoneNr);
 			Log.d("IMUSMS isTilmelding: ", String.valueOf(isTilmelding));
 			Log.d("IMUSMS isAfmelding: ", String.valueOf(isAfmelding));
 			
@@ -129,7 +129,7 @@ public class SmsBehandler
 			isAfmelding = false;
 		}else
 			if (!beskedLowCase.contains(":")) {
-				sendSms(phoneNr, "husk at indtaste : efter gruppe navn. Eksempel Gruppe1: og din besked", currSmsId);
+				sendSms(fromPhoneNr, "husk at indtaste : efter gruppe navn. Eksempel Gruppe1: og din besked", currSmsId);
 			}
 		return groupName.toUpperCase().replace(" ", "");
 	}
@@ -150,10 +150,10 @@ public class SmsBehandler
 			if (isTilmelding)
 			{
 				Log.d("IMUSMS creating...", currentName +"-in-"+  currentGroup);
-				myContacs.createGoogleContact(currentName, "bib@bob.com", phoneNr, currentGroup);
+				myContacs.createGoogleContact(currentName, "", fromPhoneNr, currentGroup);
 				
 				Log.d("IMUSMS sending...", currentName);
-				sendSms(phoneNr,"Du er tilmeldt til "
+				sendSms(fromPhoneNr,"Du er tilmeldt til "
 				+ currentGroup
 				+ " sms-fon. For at sende sms til alle i gruppen skriv "
 				+ currentGroup +" og din besked ", currSmsId);
@@ -163,23 +163,41 @@ public class SmsBehandler
 			if (isAfmelding)
 			{
 				sendSms(ADMIN_NR, currentName + " har sendt: " + besked, currSmsId);
-				//removeUser(phoneNr, currentGroup);
+				//removeUser(fromPhoneNr, currentGroup);
 				// TODO: send en besked to Admin for at afmelde bruger - indtil remove virker
 				// TODO: remove user - make it work
-				//sendSms(phoneNr,"Afmeld funktionen kører ikke korrekt, skriv en mail til uperfektfelleskab@gmail.com for at blive afmeldt. Mvh Sms telefonen");
+				//sendSms(fromPhoneNr,"Afmeld funktionen kører ikke korrekt, skriv en mail til uperfektfelleskab@gmail.com for at blive afmeldt. Mvh Sms telefonen");
                 return;
 			}
 			else
 			{
-				for (int i = 0; i < currentGroupNumbers.size(); i++)
+
+                ArrayList<String> tempNumbers = currentGroupNumbers;
+                int groupUsersCount = tempNumbers.size();
+
+                // remove messenger
+                for (int i = 0; i < groupUsersCount; i++)
+                {
+                    if (tempNumbers.get(i).equals(fromPhoneNr))
+                    {
+                        tempNumbers.remove(i);
+                        groupUsersCount--;
+                    }
+                }
+
+                // send to all numbers in group
+                if (groupUsersCount > 0)
+				for (int i = 0; i < groupUsersCount; i++)
 				{
-					sendSms(currentGroupNumbers.get(i), besked, currSmsId);
-					Log.d("IMUSMS sending to", currentGroupNumbers.get(i));
+					sendSms(tempNumbers.get(i), besked, currSmsId);
+					Log.d("IMUSMS sending to", tempNumbers.get(i));
 				}
+
+                sendSms( fromPhoneNr ,"Din besked blev sendt til " + currentGroup + " gruppens " + groupUsersCount + " brugere. Ha' det rigtigt godt!", currSmsId);
                 return;
 			}
 		}else
-			sendSms(phoneNr, "Gruppen eksisterer ikke", currSmsId);
+			sendSms(fromPhoneNr, "Gruppen eksisterer ikke", currSmsId);
 	}
 
 	public boolean sendSms(final String aDestination, String aMessageText, final String currSmsId)
@@ -198,6 +216,7 @@ public class SmsBehandler
         }
         catch (Exception e)
         {
+            Log.d("FAILED sending to: ", aDestination);
             return false;
         }
 		return true;
