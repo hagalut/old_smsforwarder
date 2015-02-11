@@ -1,4 +1,4 @@
-package dk.glutter.dk.smsforwarder;
+package dk.glutter.dk.smsforwarder.contacts;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -98,6 +98,7 @@ public class MyContacts {
 						Phone.TYPE_MOBILE).build());
 
 		// ---------- Add Contacts Email
+        /*
 		ops.add(ContentProviderOperation
 				.newInsert(Data.CONTENT_URI)
 				.withValueBackReference(Data.RAW_CONTACT_ID, 0)
@@ -108,7 +109,7 @@ public class MyContacts {
 				.withValue(ContactsContract.CommonDataKinds.Email.TYPE,
 						ContactsContract.CommonDataKinds.Email.TYPE_WORK)
 				.build());
-
+        */
 		// ---------- Add Contact To Group
 		addContactToGroup(ops, group);
 

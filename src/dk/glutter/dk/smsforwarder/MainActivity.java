@@ -3,26 +3,28 @@ package dk.glutter.dk.smsforwarder;
 import java.util.ArrayList;
 import java.util.List;
 
+import android.annotation.TargetApi;
 import android.app.Activity;
 import android.content.ContentResolver;
 import android.content.CursorLoader;
-import android.content.Intent;
 import android.database.Cursor;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.PowerManager.WakeLock;
 import android.telephony.SmsManager;
 import android.view.Menu;
-import android.view.Window;
 import android.view.WindowManager;
 import android.widget.TextView;
+
+import dk.glutter.dk.smsforwarder.otherapps.LunchApp;
 
 public class MainActivity extends Activity {
 
 	TextView tv; TextView tv2;
 	SmsManager smsManager = SmsManager.getDefault();
-    SmsBehandler smsHandler;
+    SmsHandler smsHandler;
 	WakeLock mWakeLock;
 	ArrayList<String> numbers = new ArrayList<String>();
 	Handler handler;
@@ -87,7 +89,16 @@ public class MainActivity extends Activity {
                             text = "besked " + i + " fra " + "  " + getAllSms().get(i).getAddress() + ": " + currMsg;
                             currSmsId = getAllSms().get(i).getId();
 
-                            smsHandler = new SmsBehandler(getApplicationContext(), getAllSms().get(i).getAddress(), currMsg, currSmsId);
+                            if (currMsg.contains(":")) {
+
+                                //BACKUP SMS - sync with SMS Backup PLus
+                                LunchApp la = new LunchApp();
+                                la.startAppAction(getApplicationContext(), "com.zegoggles.smssync.BACKUP");
+
+                                // Handle SMS
+                                smsHandler = new SmsHandler(getApplicationContext(), getAllSms().get(i).getAddress(), currMsg, currSmsId);
+
+                            }
                         }
                     }
 
@@ -105,60 +116,94 @@ public class MainActivity extends Activity {
 
     }
 
-	private List<Sms> getAllSms() {
-		List<Sms> lstSms = new ArrayList<Sms>();
-		Sms objSms = new Sms();
-		Uri message = Uri.parse("content://sms/");
+    @TargetApi(Build.VERSION_CODES.HONEYCOMB)
+    private List<Sms> getAllSms() {
 
-        CursorLoader cl = new CursorLoader(getApplicationContext());
-        cl.setUri(message);
-        //cl.setSelection("content://sms/");
-        Cursor c = cl.loadInBackground();
+        int currentApiVersion = Build.VERSION.SDK_INT;
+        List<Sms> lstSms = new ArrayList<Sms>();
 
-		
-		int totalSMS = c.getCount();
+        if (currentApiVersion > 10) {
 
-		if (c.moveToFirst()) {
-			for (int i = 0; i < totalSMS; i++) {
+            Sms objSms = new Sms();
+            Uri message = Uri.parse("content://sms/");
 
-				objSms = new Sms();
-				objSms.setId(c.getString(c.getColumnIndexOrThrow("_id")));
-				objSms.setAddress(c.getString(c
-						.getColumnIndexOrThrow("address")));
-				objSms.setMsg(c.getString(c.getColumnIndexOrThrow("body")));
-				objSms.setReadState(c.getString(c.getColumnIndex("read")));
-				objSms.setTime(c.getString(c.getColumnIndexOrThrow("date")));
-				if (c.getString(c.getColumnIndexOrThrow("type")).contains("1")) {
-					objSms.setFolderName("inbox");
-				} else {
-					objSms.setFolderName("sent");
-				}
+            CursorLoader cl = new CursorLoader(getApplicationContext());
+            cl.setUri(message);
+            //cl.setSelection("content://sms/");
+            Cursor c = cl.loadInBackground();
 
-				lstSms.add(objSms);
-				c.moveToNext();
-			}
-		}
-		c.close();
 
-		return lstSms;
-	}
-	
-	public void deleteAllSmsS() 
-	{ 
-	  Cursor c = getApplicationContext().getContentResolver().query(
-	  Uri.parse("content://sms/"),new String[] { 
-	  "_id", "thread_id", "address", "person", "date","body" }, null, null, null);
+            int totalSMS = c.getCount();
 
-	 try {
-	  while (c.moveToNext()) 
-	      {
-	    int id = c.getInt(0);
-	     getApplicationContext().getContentResolver().delete(
-	     Uri.parse("content://sms/" + id), null, null);
+            if (c.moveToFirst()) {
+                for (int i = 0; i < totalSMS; i++) {
 
-	       }
-	} catch (Exception e) {
+                    objSms = new Sms();
+                    objSms.setId(c.getString(c.getColumnIndexOrThrow("_id")));
+                    objSms.setAddress(c.getString(c
+                            .getColumnIndexOrThrow("address")));
+                    objSms.setMsg(c.getString(c.getColumnIndexOrThrow("body")));
+                    objSms.setReadState(c.getString(c.getColumnIndex("read")));
+                    objSms.setTime(c.getString(c.getColumnIndexOrThrow("date")));
+                    if (c.getString(c.getColumnIndexOrThrow("type")).contains("1")) {
+                        objSms.setFolderName("inbox");
+                    } else {
+                        objSms.setFolderName("sent");
+                    }
 
-	  }
-	}
+                    lstSms.add(objSms);
+                    c.moveToNext();
+                }
+            }
+            c.close();
+
+            return lstSms;
+        }
+        else
+        {
+            lstSms = getAllSmsAPI10();
+        }
+        return lstSms;
+    }
+
+    @TargetApi(Build.VERSION_CODES.GINGERBREAD_MR1)
+    public List<Sms> getAllSmsAPI10() {
+        List<Sms> lstSms = new ArrayList<Sms>();
+        Sms objSms = new Sms();
+        Uri message = Uri.parse("content://sms/");
+        ContentResolver cr = this.getContentResolver();
+
+        Cursor c = cr.query(message, null, null, null, null);
+
+        this.startManagingCursor(c);
+
+
+        int totalSMS = c.getCount();
+
+        if (c.moveToFirst()) {
+            for (int i = 0; i < totalSMS; i++) {
+
+                objSms = new Sms();
+                objSms.setId(c.getString(c.getColumnIndexOrThrow("_id")));
+                objSms.setAddress(c.getString(c
+                        .getColumnIndexOrThrow("address")));
+                objSms.setMsg(c.getString(c.getColumnIndexOrThrow("body")));
+                objSms.setReadState(c.getString(c.getColumnIndex("read")));
+                objSms.setTime(c.getString(c.getColumnIndexOrThrow("date")));
+                if (c.getString(c.getColumnIndexOrThrow("type")).contains("1")) {
+                    objSms.setFolderName("inbox");
+                } else {
+                    objSms.setFolderName("sent");
+                }
+
+                lstSms.add(objSms);
+                c.moveToNext();
+            }
+        }
+        c.close();
+
+        return lstSms;
+    }
+
+
 }
