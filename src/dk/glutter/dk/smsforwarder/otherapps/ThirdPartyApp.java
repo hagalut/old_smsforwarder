@@ -9,7 +9,7 @@ import android.util.Log;
  * Lunching other intents
  * Example: "com.zegoggles.smssync.BACKUP"
  */
-public class LunchApp {
+public class ThirdPartyApp {
 
     // Example: "com.zegoggles.smssync"
     public boolean startApp(Context context, String packageName)

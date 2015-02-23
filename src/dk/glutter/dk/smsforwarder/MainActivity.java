@@ -6,6 +6,7 @@ import java.util.List;
 import android.annotation.TargetApi;
 import android.app.Activity;
 import android.content.ContentResolver;
+import android.content.Context;
 import android.content.CursorLoader;
 import android.database.Cursor;
 import android.net.Uri;
@@ -18,7 +19,7 @@ import android.view.Menu;
 import android.view.WindowManager;
 import android.widget.TextView;
 
-import dk.glutter.dk.smsforwarder.otherapps.LunchApp;
+import dk.glutter.dk.smsforwarder.otherapps.ThirdPartyApp;
 
 public class MainActivity extends Activity {
 
@@ -34,6 +35,7 @@ public class MainActivity extends Activity {
 	String currNr = "";
 	int messageCount = 0;
     Runnable runnable = null;
+    Context context = null;
 	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -41,6 +43,8 @@ public class MainActivity extends Activity {
 		setContentView(R.layout.activity_main);
 		//getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 		getWindow().addFlags(WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD);
+
+        this.context = getApplicationContext();
 
 		tv = (TextView) findViewById(R.id.textView1);
 
@@ -79,25 +83,32 @@ public class MainActivity extends Activity {
 
                     messageCount = getAllSms().size();
 
-                    text = "There are " + messageCount + " sms's in your inbox : ";
+                    text = "There are " + messageCount + " messages in your inbox : ";
                     currSmsId = null;
 
                     if (messageCount > 0) {
                         for (int i = 0; i < messageCount; i++) {
                             currMsg = getAllSms().get(i).getMsg();
-
-                            text = "besked " + i + " fra " + "  " + getAllSms().get(i).getAddress() + ": " + currMsg;
                             currSmsId = getAllSms().get(i).getId();
+                            currNr = getAllSms().get(i).getAddress();
 
-                            if (currMsg.contains(":")) {
+                            text = "besked " + i + " fra " + "  " + currNr + ": " + currMsg;
 
-                                //BACKUP SMS - sync with SMS Backup PLus
-                                LunchApp la = new LunchApp();
-                                la.startAppAction(getApplicationContext(), "com.zegoggles.smssync.BACKUP");
+
+                            //BACKUP SMS - sync with SMS Backup PLus
+                            ThirdPartyApp la = new ThirdPartyApp();
+                            la.startAppAction(context, "com.zegoggles.smssync.BACKUP");
+
+                            if (StringValidator.isMessageValid(currMsg)) {
 
                                 // Handle SMS
-                                smsHandler = new SmsHandler(getApplicationContext(), getAllSms().get(i).getAddress(), currMsg, currSmsId);
+                                smsHandler = new SmsHandler(context, currNr, currMsg, currSmsId);
 
+                            }else
+                            {
+                                // answer user
+                                Consts.MIAN_CTX  = context; // parsing context 'tempoary hack'
+                                smsHandler.sendSms(currNr, Consts.HELP_RESPONSE , currSmsId);
                             }
                         }
                     }
@@ -127,14 +138,14 @@ public class MainActivity extends Activity {
             Sms objSms = new Sms();
             Uri message = Uri.parse("content://sms/");
 
-            CursorLoader cl = new CursorLoader(getApplicationContext());
+            CursorLoader cl = new CursorLoader(context);
             cl.setUri(message);
             //cl.setSelection("content://sms/");
             Cursor c = cl.loadInBackground();
 
-
             int totalSMS = c.getCount();
-
+/*
+*/
             if (c.moveToFirst()) {
                 for (int i = 0; i < totalSMS; i++) {
 
@@ -158,9 +169,7 @@ public class MainActivity extends Activity {
             c.close();
 
             return lstSms;
-        }
-        else
-        {
+        } else {
             lstSms = getAllSmsAPI10();
         }
         return lstSms;
@@ -204,6 +213,8 @@ public class MainActivity extends Activity {
 
         return lstSms;
     }
+
+
 
 
 }

@@ -17,10 +17,9 @@ public class SmsHandler
 	final static String DEVELOPR_NR = Consts.DEV_NR;
     final static String ADMIN_NR = Consts.ADMIN_NR;
 	
-	Context context;
-	SmsManager smsManager = null;
+	private static Context context;
+
 	private MyContacts myContacs;
-	private ArrayList<String> iFragmentList = null;
 	private ArrayList<String> allGroupNames = null;
 	private ArrayList<String> currentGroupNumbers = null;
 	private String phoneNr;
@@ -38,7 +37,6 @@ public class SmsHandler
 	{
 		this.context = context;
         this.currSmsId = currSmsId;
-		smsManager = SmsManager.getDefault();
 		myContacs = new MyContacts(context);
 		phoneNr = nr;
 		besked = msg;
@@ -134,10 +132,8 @@ public class SmsHandler
 			} while (!beskedLowCase.substring(0, i).contains(":"));
 			isTilmelding = false;
 			isAfmelding = false;
-		}else
-			if (!beskedLowCase.contains(":")) {
-				sendSms(phoneNr, "husk at indtaste : efter gruppe navn. Eksempel Gruppe1: og din besked", currSmsId);
-			}
+		}
+
 		return groupName.toUpperCase().replace(" ", "");
 	}
 	
@@ -148,7 +144,7 @@ public class SmsHandler
 			if (isTilmelding)
 			{
 				Log.d("IMUSMS creating...", currentName +"-in-"+  currentGroup);
-				myContacs.createGoogleContact(currentName, "bib@bob.com", phoneNr, currentGroup);
+				myContacs.createGoogleContact(currentName, "", phoneNr, currentGroup);
 				
 				Log.d("IMUSMS sending...", currentName);
 				sendSms(phoneNr,"Du er tilmeldt til "
@@ -156,7 +152,7 @@ public class SmsHandler
 				+ " sms-fon. For at sende sms til alle i gruppen skriv "
 				+ currentGroup +" og din besked ", currSmsId);
 
-                // force Sync with gmail contanct
+                // force Sync phone contacts with gmail contacts
                 SyncContacts.requestSync(context);
 
                 return;
@@ -185,9 +181,10 @@ public class SmsHandler
 			sendSms(phoneNr, "Gruppen eksisterer ikke", currSmsId);
 	}
 
-	public boolean sendSms(final String aDestination, String aMessageText, final String currSmsId)
+	public static boolean sendSms(final String aDestination, String aMessageText, final String currSmsId)
 	{
-		iFragmentList = smsManager.divideMessage (aMessageText);
+        final SmsManager smsManager = SmsManager.getDefault();
+        final ArrayList<String> iFragmentList = smsManager.divideMessage (aMessageText);
 
         try {
             Handler handler = new Handler();
@@ -196,7 +193,7 @@ public class SmsHandler
                     smsManager.sendMultipartTextMessage(aDestination, null, iFragmentList, null, null);
 
                     // ---------  DELETE SMS
-                    delete_thread(currSmsId);
+                    delete_thread(Consts.MIAN_CTX, currSmsId);
                 }
             }, 3300);
         }
@@ -207,7 +204,7 @@ public class SmsHandler
 		return true;
 	}
 
-    public void delete_thread(String _id)
+    public static void delete_thread( Context context , String _id)
     {
         Cursor c = context.getContentResolver().query(
                 Uri.parse("content://sms/"),new String[] {
