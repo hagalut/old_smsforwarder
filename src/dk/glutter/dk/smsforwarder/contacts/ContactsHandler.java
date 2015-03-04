@@ -24,13 +24,14 @@ import android.provider.ContactsContract.CommonDataKinds.Phone;
 import android.provider.ContactsContract.CommonDataKinds.StructuredName;
 import android.util.Log;
 import android.util.Patterns;
+import android.widget.Toast;
 
-public class MyContacts {
-	ArrayList<ContentProviderOperation> ops = new ArrayList<ContentProviderOperation>();
+public class ContactsHandler {
+
 	Context context;
-	public static String googleAccountName = "uperfektfelleskab@gmail.com";
+	public static String googleAccountName = "someemail@gmail.com";
 
-	public MyContacts(Context cont) {
+	public ContactsHandler(Context cont) {
 		this.context = cont;
 		
 		Pattern emailPattern = Patterns.EMAIL_ADDRESS; // API level 8+
@@ -45,59 +46,43 @@ public class MyContacts {
 	}
 
 	// ------------------------------------------------------ Create Google
-	// Group ()
-	public void createGoogleGroup(String groupName) {
-		ops = new ArrayList<ContentProviderOperation>();
-
-		ops.add(ContentProviderOperation
-				.newInsert(ContactsContract.Groups.CONTENT_URI)
-				.withValue(ContactsContract.Groups.TITLE, groupName)
-				.withValue(ContactsContract.RawContacts.ACCOUNT_TYPE,
-						"com.google")
-				.withValue(ContactsContract.RawContacts.ACCOUNT_NAME,
-						googleAccountName).build());
-		try {
-
-			context.getContentResolver().applyBatch(ContactsContract.AUTHORITY,
-					ops);
-
-		} catch (Exception e) {
-			Log.e("Error on Creating Group(MyContacts)", e.toString());
-		}
-	}
-
-	// ------------------------------------------------------ Create Google
 	// Contact ()
 	public void createGoogleContact(String name, String email, String phone, String group) {
-		ops = new ArrayList<ContentProviderOperation>();
-		ops.add(ContentProviderOperation
-				.newInsert(ContactsContract.RawContacts.CONTENT_URI)
-				.withValue(ContactsContract.RawContacts.ACCOUNT_TYPE,
-						"com.google")
-				.withValue(ContactsContract.RawContacts.ACCOUNT_NAME,
-						googleAccountName)
-				// .withValue(RawContacts.AGGREGATION_MODE,
-				// RawContacts.AGGREGATION_MODE_DEFAULT)
-				.build());
+        ArrayList<ContentProviderOperation> ops = new ArrayList<ContentProviderOperation>();
 
-		// ---------- Add Contacts First and Last names
-		ops.add(ContentProviderOperation.newInsert(Data.CONTENT_URI)
-				.withValueBackReference(Data.RAW_CONTACT_ID, 0)
-				.withValue(Data.MIMETYPE, StructuredName.CONTENT_ITEM_TYPE)
-				.withValue(StructuredName.GIVEN_NAME, name).build());
+        String ctctName = getContactName(phone);
 
-		// ---------- Add Contacts Mobile Phone Number
-		ops.add(ContentProviderOperation
-				.newInsert(Data.CONTENT_URI)
-				.withValueBackReference(Data.RAW_CONTACT_ID, 0)
-				.withValue(
-						ContactsContract.Data.MIMETYPE,
-						ContactsContract.CommonDataKinds.Phone.CONTENT_ITEM_TYPE)
-				.withValue(ContactsContract.CommonDataKinds.Phone.NUMBER, phone)
-				.withValue(ContactsContract.CommonDataKinds.Phone.TYPE,
-						Phone.TYPE_MOBILE).build());
+        if ( ctctName == null ) {
 
-		// ---------- Add Contacts Email
+            ops = new ArrayList<ContentProviderOperation>();
+            ops.add(ContentProviderOperation
+                    .newInsert(ContactsContract.RawContacts.CONTENT_URI)
+                    .withValue(ContactsContract.RawContacts.ACCOUNT_TYPE,
+                            "com.google")
+                    .withValue(ContactsContract.RawContacts.ACCOUNT_NAME,
+                            googleAccountName)
+                            // .withValue(RawContacts.AGGREGATION_MODE,
+                            // RawContacts.AGGREGATION_MODE_DEFAULT)
+                    .build());
+
+            // ---------- Add Contacts First and Last names
+            ops.add(ContentProviderOperation.newInsert(Data.CONTENT_URI)
+                    .withValueBackReference(Data.RAW_CONTACT_ID, 0)
+                    .withValue(Data.MIMETYPE, StructuredName.CONTENT_ITEM_TYPE)
+                    .withValue(StructuredName.GIVEN_NAME, name).build());
+
+            // ---------- Add Contacts Mobile Phone Number
+            ops.add(ContentProviderOperation
+                    .newInsert(Data.CONTENT_URI)
+                    .withValueBackReference(Data.RAW_CONTACT_ID, 0)
+                    .withValue(
+                            ContactsContract.Data.MIMETYPE,
+                            ContactsContract.CommonDataKinds.Phone.CONTENT_ITEM_TYPE)
+                    .withValue(ContactsContract.CommonDataKinds.Phone.NUMBER, phone)
+                    .withValue(ContactsContract.CommonDataKinds.Phone.TYPE,
+                            Phone.TYPE_MOBILE).build());
+
+            // ---------- Add Contacts Email
         /*
 		ops.add(ContentProviderOperation
 				.newInsert(Data.CONTENT_URI)
@@ -110,8 +95,41 @@ public class MyContacts {
 						ContactsContract.CommonDataKinds.Email.TYPE_WORK)
 				.build());
         */
-		// ---------- Add Contact To Group
-		addContactToGroup(ops, group);
+            // ---------- Add Contact To Group
+            addContactToGroup(ops, group);
+        }else
+        {
+            String id = "0";
+            try{
+                id = getContactID(phone);
+            }
+            catch (Exception e)
+            {
+                Log.d("GetNumberID error", e.getMessage());
+            }
+            // Name
+            try {
+
+                long contactID = Long.parseLong(getContactID(phone));
+
+                long ctctRawId = Long.parseLong(id);
+                long grpRawId =  Long.parseLong(getGroupId(group));
+
+                ops.add(ContentProviderOperation.newUpdate(addToGroup(ctctRawId , grpRawId )).withValue(ContactsContract.RawContacts.ACCOUNT_TYPE,
+                        "com.google").build());
+
+            } catch (Exception e) {
+                Log.w("UpdateContact", e.getMessage()+"");
+                for(StackTraceElement ste : e.getStackTrace()) {
+                    Log.w("UpdateContact", "\t" + ste.toString());
+                }
+                Context ctx = context.getApplicationContext();
+                int duration = Toast.LENGTH_SHORT;
+                Toast toast = Toast.makeText(ctx, "Update failed", duration);
+                toast.show();
+            }
+
+        }
 
 		try {
 			ContentProviderResult[] results = context.getContentResolver()
@@ -307,31 +325,6 @@ public class MyContacts {
 						GroupId).build());
 	}
 
-	// ------------------------------------------------------ Add person ID To
-	// Group
-	private Uri addToGroup(long personId, long groupId) {
-
-		// - TODO - find person ID og groupID
-
-		// - TODO - remove if exists
-		// this.removeFromGroup(personId, groupId);
-
-		ContentValues values = new ContentValues();
-		values.put(
-				ContactsContract.CommonDataKinds.GroupMembership.RAW_CONTACT_ID,
-				personId);
-		values.put(
-				ContactsContract.CommonDataKinds.GroupMembership.GROUP_ROW_ID,
-				groupId);
-		values.put(
-				ContactsContract.CommonDataKinds.GroupMembership.MIMETYPE,
-				ContactsContract.CommonDataKinds.GroupMembership.CONTENT_ITEM_TYPE);
-
-		return this.context.getContentResolver().insert(
-				ContactsContract.Data.CONTENT_URI, values);
-
-	}
-
 	// ------------------------------------------------------ Remove Contact
 	// From Group
 	public boolean deleteContactFromGroup(String phoneNr, String group)
@@ -381,40 +374,6 @@ public class MyContacts {
 
 		return ids;
 	}
-	
-	// -------- Return Group RAW ID for contact ID
-	private long getGroupRawIdFor(Long contactId){
-	    Uri uri = Data.CONTENT_URI;
-	    String where = String.format(
-	            "%s = ? AND %s = ?",
-	            Data.MIMETYPE,
-	            GroupMembership.CONTACT_ID);
-
-	    String[] whereParams = new String[] {
-	               GroupMembership.CONTENT_ITEM_TYPE,
-	               Long.toString(contactId),
-	    };
-
-	    String[] selectColumns = new String[]{
-	            GroupMembership.GROUP_ROW_ID,
-	    };
-
-
-	    Cursor groupIdCursor = context.getContentResolver().query(
-	            uri, 
-	            selectColumns, 
-	            where, 
-	            whereParams, 
-	            null);
-	    try{
-	        if (groupIdCursor.moveToFirst()) {
-	            return groupIdCursor.getLong(0);
-	        }
-	        return Long.MIN_VALUE; // Has no group ...
-	    }finally{
-	        groupIdCursor.close();
-	    }
-	}
 
 	private String getContactID(String phoneNr) {
 		ContentResolver contentResolver = context.getContentResolver();
@@ -441,6 +400,95 @@ public class MyContacts {
 		}
 		return null;
 	}
+
+    /* -------------------- UNUSED Methods --------------------- */
+
+    // ------------------------------------------------------ Add person ID To
+    // Group
+    private Uri addToGroup(long rawPersonId, long rawGroupId) {
+
+        ContentValues values = new ContentValues();
+        values.put(
+                ContactsContract.CommonDataKinds.GroupMembership.RAW_CONTACT_ID,
+                rawPersonId);
+        values.put(
+                ContactsContract.CommonDataKinds.GroupMembership.GROUP_ROW_ID,
+                rawGroupId);
+        values.put(
+                ContactsContract.CommonDataKinds.GroupMembership.MIMETYPE,
+                ContactsContract.CommonDataKinds.GroupMembership.CONTENT_ITEM_TYPE);
+
+        return this.context.getContentResolver().insert(
+                ContactsContract.Data.CONTENT_URI, values);
+
+    }
+
+    // -------- Return Group RAW ID for contact ID
+    private long getGroupRawIdFromID(Long contactId){
+        Uri uri = Data.CONTENT_URI;
+        String where = String.format(
+                "%s = ? AND %s = ?",
+                Data.MIMETYPE,
+                GroupMembership.CONTACT_ID);
+
+        String[] whereParams = new String[] {
+                GroupMembership.CONTENT_ITEM_TYPE,
+                Long.toString(contactId),
+        };
+
+        String[] selectColumns = new String[]{
+                GroupMembership.GROUP_ROW_ID,
+        };
+
+
+        Cursor groupIdCursor = context.getContentResolver().query(
+                uri,
+                selectColumns,
+                where,
+                whereParams,
+                null);
+        try{
+            if (groupIdCursor.moveToFirst()) {
+                return groupIdCursor.getLong(0);
+            }
+            return Long.MIN_VALUE; // Has no group ...
+        }finally{
+            groupIdCursor.close();
+        }
+    }
+
+    private long getGroupRawIdFromName(String groupName){
+        Uri uri = Data.CONTENT_URI;
+        String where = String.format(
+                "%s = ? AND %s = ?",
+                Data.MIMETYPE,
+                GroupMembership.CONTACT_ID);
+
+        String[] whereParams = new String[] {
+                GroupMembership.DISPLAY_NAME,
+                groupName,
+        };
+
+        String[] selectColumns = new String[]{
+                GroupMembership.GROUP_ROW_ID,
+        };
+
+
+        Cursor groupIdCursor = context.getContentResolver().query(
+                uri,
+                selectColumns,
+                where,
+                whereParams,
+                null);
+        try{
+            if (groupIdCursor.moveToFirst()) {
+                return groupIdCursor.getLong(0);
+            }
+            return Long.MIN_VALUE; // Has no group ...
+        }finally{
+            groupIdCursor.close();
+        }
+    }
 	
 	public String getContactName(String phoneNr) {
 		ContentResolver contentResolver = context.getContentResolver();
@@ -465,5 +513,29 @@ public class MyContacts {
 		}
 		return null;
 	}
+
+    // ------------------------------------------------------ Create Google
+    // Group ()
+    public void createGoogleGroup(String groupName) {
+        ArrayList<ContentProviderOperation> ops = new ArrayList<ContentProviderOperation>();
+
+        ops = new ArrayList<ContentProviderOperation>();
+
+        ops.add(ContentProviderOperation
+                .newInsert(ContactsContract.Groups.CONTENT_URI)
+                .withValue(ContactsContract.Groups.TITLE, groupName)
+                .withValue(ContactsContract.RawContacts.ACCOUNT_TYPE,
+                        "com.google")
+                .withValue(ContactsContract.RawContacts.ACCOUNT_NAME,
+                        googleAccountName).build());
+        try {
+
+            context.getContentResolver().applyBatch(ContactsContract.AUTHORITY,
+                    ops);
+
+        } catch (Exception e) {
+            Log.e("Error Creating Group", e.toString());
+        }
+    }
 
 }

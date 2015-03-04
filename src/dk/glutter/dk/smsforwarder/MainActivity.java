@@ -106,9 +106,7 @@ public class MainActivity extends Activity {
 
                             }else
                             {
-                                // answer user
-                                Consts.MIAN_CTX  = context; // parsing context 'tempoary hack'
-                                smsHandler.sendSms(currNr, Consts.HELP_RESPONSE , currSmsId);
+                                smsHandler.sendSmsThenDelete(currNr, Consts.HELP_RESPONSE, currSmsId);
                             }
                         }
                     }

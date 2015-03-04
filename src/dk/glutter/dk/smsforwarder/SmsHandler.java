@@ -9,7 +9,7 @@ import android.os.Handler;
 import android.telephony.SmsManager;
 import android.util.Log;
 
-import dk.glutter.dk.smsforwarder.contacts.MyContacts;
+import dk.glutter.dk.smsforwarder.contacts.ContactsHandler;
 import dk.glutter.dk.smsforwarder.contacts.SyncContacts;
 
 public class SmsHandler
@@ -19,7 +19,7 @@ public class SmsHandler
 	
 	private static Context context;
 
-	private MyContacts myContacs;
+	private ContactsHandler myContacs;
 	private ArrayList<String> allGroupNames = null;
 	private ArrayList<String> currentGroupNumbers = null;
 	private String phoneNr;
@@ -37,7 +37,7 @@ public class SmsHandler
 	{
 		this.context = context;
         this.currSmsId = currSmsId;
-		myContacs = new MyContacts(context);
+		myContacs = new ContactsHandler(context);
 		phoneNr = nr;
 		besked = msg;
 		beskedLowCase = msg.toLowerCase();
@@ -52,7 +52,7 @@ public class SmsHandler
 				// TODO: handle exception
 				Log.d("IMUSMS group ", "something went wrong: " + e);
 				Log.d("IMUSMS msg ", msg);
-				sendSms(DEVELOPR_NR, besked, currSmsId);
+				sendSmsThenDelete(DEVELOPR_NR, besked, currSmsId);
 				stopNow = true;
 			}
 			
@@ -73,38 +73,25 @@ public class SmsHandler
                 if (groupFound)
                     treatSmsLikeAKing();
                 else
-                    sendSms(phoneNr, "gruppen findes ikke", currSmsId);
+                    sendSmsThenDelete(phoneNr, "Gruppen " + currentGroup + " findes ikke.", currSmsId);
 			}
 			if (stopNow) {
-				sendSms(phoneNr, "der gik noget galt prøv igen", currSmsId);
+				sendSmsThenDelete(phoneNr, "Der gik noget galt prøv igen", currSmsId);
 			}
-			
-			
-			
-			/* -------------- LOGGGG ----------------
-			 * 
-			Log.d("IMUSMS currentGroup: ", currentGroup);
-			Log.d("IMUSMS currentName: ", currentName);
-			Log.d("IMUSMS phoneNr: ", phoneNr);
-			Log.d("IMUSMS isTilmelding: ", String.valueOf(isTilmelding));
-			Log.d("IMUSMS isAfmelding: ", String.valueOf(isAfmelding));
-			
-			*/
-			
 	}
 
     private String findGroupAndUserNameFromMsg()
 	{
 		String groupName = "";
 		int i = 0;
-		
+
 		// --------- - TILMELD - ---------
-		if (beskedLowCase.startsWith("tilmeld")){
-			i = i + 7; // to ignore string: "tilmeld " - and get group name after string
+		if (StringValidator.isSignup(beskedLowCase)){
+			i = i + 8; // to ignore string: "tilmeld " - and get group name after string
 			do {
 				groupName += beskedLowCase.substring(i, i+1); //Eks. IMU:  i+m+u
 				i++;
-			} while (!beskedLowCase.substring(7, i).contains(":"));
+			} while (!beskedLowCase.substring(6, i).contains(":"));
 			isTilmelding = true;
 			// Exstract string after String: tilmeld & group
 			currentName = beskedLowCase.substring(8+groupName.length());
@@ -112,7 +99,7 @@ public class SmsHandler
             return groupName.toUpperCase().replace(" ", "");
 		}
 		// --------- - AFMELD - ---------
-		if (beskedLowCase.startsWith("afmeld")) {
+		if (StringValidator.isResign(beskedLowCase)) {
 			i = i + 6; // to ignore string: "tilmeld " - and get group name after string
 			do {
 				groupName += beskedLowCase.substring(i, i+1); //Eks. IMU:  i+m+u
@@ -143,17 +130,27 @@ public class SmsHandler
 			
 			if (isTilmelding)
 			{
-				Log.d("IMUSMS creating...", currentName +"-in-"+  currentGroup);
-				myContacs.createGoogleContact(currentName, "", phoneNr, currentGroup);
-				
-				Log.d("IMUSMS sending...", currentName);
-				sendSms(phoneNr,"Du er tilmeldt til "
-				+ currentGroup
-				+ " sms-fon. For at sende sms til alle i gruppen skriv "
-				+ currentGroup +" og din besked ", currSmsId);
+                if ( !(myContacs.getAllNumbersFromGroupName(currentGroup).contains(phoneNr)) )
+                {
+                    Log.d("IMUSMS creating...", currentName +"-in-"+  currentGroup);
+                    myContacs.createGoogleContact(currentName, "", phoneNr, currentGroup);
 
-                // force Sync phone contacts with gmail contacts
-                SyncContacts.requestSync(context);
+                    Log.d("Signup sending", currentName);
+                    sendSmsThenDelete(phoneNr, "Du er tilmeldt til "
+                            + currentGroup
+                            + " sms-fon. For at sende sms til alle i gruppen skriv "
+                            + currentGroup + " og din besked ", currSmsId);
+
+                    // force Sync phone contacts with gmail contacts
+                    SyncContacts.requestSync(context);
+                }else
+                {
+                    Log.d("DENY Respond", currentName);
+                    sendSmsThenDelete(phoneNr, "Du er allerede tilmeldt til "
+                            + currentGroup
+                            + " sms-fon :-) . For at sende sms til alle i gruppen skriv "
+                            + currentGroup + " og din besked ", currSmsId);
+                }
 
                 return;
 			}
@@ -163,7 +160,7 @@ public class SmsHandler
 				// TODO: send en besked to Admin for at afmelde bruger - indtil remove virker
 				// TODO: remove user - make it work
 
-                // force Sync with gmail contanct
+                // force Sync with google contacts
                 SyncContacts.requestSync(context);
 
                 return;
@@ -172,45 +169,53 @@ public class SmsHandler
 			{
 				for (int i = 0; i < currentGroupNumbers.size(); i++)
 				{
-					sendSms(currentGroupNumbers.get(i), besked, currSmsId);
+					sendSmsThenDelete(currentGroupNumbers.get(i), besked, currSmsId);
 					Log.d("IMUSMS sending to", currentGroupNumbers.get(i));
 				}
                 return;
 			}
 		}else
-			sendSms(phoneNr, "Gruppen eksisterer ikke", currSmsId);
+			sendSmsThenDelete(phoneNr, "Gruppen eksisterer ikke", currSmsId);
 	}
 
-	public static boolean sendSms(final String aDestination, String aMessageText, final String currSmsId)
+	public static boolean sendSmsThenDelete(final String aDestination, final String aMessageText, final String currSmsId)
 	{
         final SmsManager smsManager = SmsManager.getDefault();
         final ArrayList<String> iFragmentList = smsManager.divideMessage (aMessageText);
 
         try {
+            Log.d("Sendign SMS to...", aDestination +" messge: "+  aMessageText);
             Handler handler = new Handler();
             handler.postDelayed(new Runnable() {
                 public void run() {
                     smsManager.sendMultipartTextMessage(aDestination, null, iFragmentList, null, null);
 
-                    // ---------  DELETE SMS
-                    delete_thread(Consts.MIAN_CTX, currSmsId);
+                    // try ---------  DELETE SMS
+                    try{
+                        delete_thread(currSmsId);
+                    }catch(Exception e){
+                        Log.d("Error deleting SMS ", aDestination +" messge: "+  aMessageText);
+                    }
+
                 }
             }, 3300);
         }
         catch (Exception e)
         {
+            Log.d("Error sending SMS to...", aDestination +" messge: "+  aMessageText);
             return false;
         }
 		return true;
 	}
 
-    public static void delete_thread( Context context , String _id)
+    public static void delete_thread( String _id)
     {
         Cursor c = context.getContentResolver().query(
                 Uri.parse("content://sms/"),new String[] {
                         "_id", "thread_id", "address", "person", "date","body" }, null, null, null);
 
         try {
+            Log.d("Deleting SMS with ", " ID: "+  _id);
             while (c.moveToNext())
             {
                 int id = c.getInt(0);
@@ -223,7 +228,7 @@ public class SmsHandler
 
             }
         } catch (Exception e) {
-
+            Log.d("Error deleting SMS ", " ID: "+  _id);
         }
     }
 	
@@ -233,11 +238,11 @@ public class SmsHandler
         String failedMsg = phoneNr+"har prøvet at afmelde sig og mislykkes. " + "besked: " + besked;
         try {
             myContacs.deleteContactFromGroup( phoneNr, currentGroup);
-            sendSms(phoneNr,"Du er afmeldt fra "+currentGroup+" sms-fon. ", currSmsId);
+            sendSmsThenDelete(phoneNr, "Du er afmeldt fra " + currentGroup + " sms-fon. ", currSmsId);
         }catch (Exception e)
         {
             Log.d(failedMsg, e.getMessage());
-            sendSms(ADMIN_NR, failedMsg, currSmsId);
+            sendSmsThenDelete(ADMIN_NR, failedMsg, currSmsId);
         }
 
 	}
