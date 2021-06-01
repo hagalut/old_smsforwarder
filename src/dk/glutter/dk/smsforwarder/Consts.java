@@ -12,8 +12,8 @@ import android.provider.CallLog;
  */
 public final class Consts {
 
-    public static final String DEV_NR = "61770122";
-    public static final String ADMIN_NR = "61770122";
+    public static final String DEV_NR = "00112233";
+    public static final String ADMIN_NR = "00112233";
 
     public static Context MIAN_CTX = null;
 
